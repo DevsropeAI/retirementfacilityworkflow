@@ -70,18 +70,21 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
             </span>
             )}
         </div>
+        
+        {/*  FIX: Add onClick handler to stop navigation */}
         <Button
             variant="ghost"
             size="icon"
             onClick={(e) => {
-            e.stopPropagation(); // Prevents the link from triggering
+            e.preventDefault();      // Prevent the Link from navigating
+            e.stopPropagation();      // Stop event from bubbling up
             setCollapsed(!collapsed);
             }}
             className="ml-auto"
         >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
         </Button>
-</Link>
+        </Link>
 
         {/* Navigation */}
         <nav className="flex-1 p-2 space-y-1 overflow-y-auto">

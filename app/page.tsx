@@ -1,3 +1,5 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -48,7 +50,16 @@ export default function LandingPage() {
               Get personalized guidance from our experts.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" className="gap-2">
+              <Button 
+                size="lg" 
+                className="gap-2"
+                onClick={() => {
+                  document.getElementById('request-info')?.scrollIntoView({ 
+                    behavior: 'smooth',
+                    block: 'start'
+                  });
+                }}
+              >
                 <Calendar className="w-5 h-5" /> Request Information
               </Button>
               <Button size="lg" variant="outline" className="gap-2">
@@ -113,11 +124,11 @@ export default function LandingPage() {
       </section>
 
       {/* Request Information Form */}
-      <section className="py-16 px-4 bg-gray-50">
-        <div className="container mx-auto max-w-4xl">
-          <div className="text-center mb-10">
-            <h2 className="text-3xl font-bold text-gray-900">Request Information</h2>
-            <p className="text-gray-600 mt-2">Fill in the form below and we'll get back to you within 24 hours</p>
+      <section id="request-info" className="py-16 px-4 bg-gray-50">
+      <div className="container mx-auto max-w-4xl">
+        <div className="text-center mb-10">
+          <h2 className="text-3xl font-bold text-gray-900">Request Information</h2>
+          <p className="text-gray-600 mt-2">Fill in the form below and we'll get back to you within 24 hours</p>
           </div>
           <form className="space-y-6">
             <div className="grid md:grid-cols-2 gap-4">
