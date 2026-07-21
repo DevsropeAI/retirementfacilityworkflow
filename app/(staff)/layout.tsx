@@ -36,6 +36,15 @@ const navItems = [
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 
+const handleLogout = () => {
+  // Clear both localStorage and cookie
+  localStorage.removeItem("token");
+  localStorage.removeItem("staff");
+  document.cookie = "token=; path=/; max-age=0"; // Delete cookie
+  router.push("/login");
+};
+
+
 export default function StaffLayout({ children }: { children: React.ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
   const pathname = usePathname();
@@ -49,30 +58,30 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
           ${collapsed ? "w-16" : "w-64"}
         `}
       >
-        {/* Logo */}
-        <div className="flex items-center justify-between p-4 border-b">
-          {!collapsed && (
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center text-white font-bold text-sm">
-                RP
-              </div>
-              <span className="text-sm font-semibold text-gray-800">Retirees Paradise</span>
+       {/* Logo - Clickable to go to landing page */}
+        <Link href="/" className="flex items-center justify-between p-4 border-b group">
+        <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center text-white font-bold text-sm">
+            RP
             </div>
-          )}
-          {collapsed && (
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-green-500 flex items-center justify-center text-white font-bold text-sm mx-auto">
-              RP
-            </div>
-          )}
-          <Button
+            {!collapsed && (
+            <span className="text-sm font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
+                Retirees Paradise
+            </span>
+            )}
+        </div>
+        <Button
             variant="ghost"
             size="icon"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={(e) => {
+            e.stopPropagation(); // Prevents the link from triggering
+            setCollapsed(!collapsed);
+            }}
             className="ml-auto"
-          >
+        >
             {collapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />}
-          </Button>
-        </div>
+        </Button>
+</Link>
 
         {/* Navigation */}
         <nav className="flex-1 p-2 space-y-1 overflow-y-auto">
@@ -96,11 +105,21 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
         </nav>
 
         {/* Logout */}
-        <div className="p-2 border-t">
-          <Button variant="ghost" className={`w-full justify-start gap-3 ${collapsed ? "px-2 justify-center" : "px-3"} text-red-500 hover:text-red-600 hover:bg-red-50`}>
+        {/* Logout - Always visible at bottom */}
+        <div className="p-2 border-t mt-auto">
+        <Button 
+            variant="ghost" 
+            onClick={() => {
+            localStorage.removeItem("token");
+            localStorage.removeItem("staff");
+            document.cookie = "token=; path=/; max-age=0";
+            window.location.href = "/login";
+            }}
+            className="w-full justify-start gap-3 text-red-500 hover:text-red-600 hover:bg-red-50"
+        >
             <LogOut className="h-5 w-5 shrink-0" />
-            {!collapsed && <span>Logout</span>}
-          </Button>
+            <span>Logout</span>
+        </Button>
         </div>
       </aside>
 

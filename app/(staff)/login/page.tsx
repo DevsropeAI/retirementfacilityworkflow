@@ -33,8 +33,22 @@ export default function LoginPage() {
       }
 
       const data = await response.json();
+      
+      // ✅ STORE TOKEN IN LOCALSTORAGE (for API calls)
       localStorage.setItem("token", data.access_token);
-      localStorage.setItem("staff", JSON.stringify({ id: data.staff_id, name: data.name, email: data.email, role: data.role }));
+      
+      // ✅ STORE TOKEN IN COOKIE (for middleware route protection)
+      document.cookie = `token=${data.access_token}; path=/; max-age=86400`; // 24 hours
+      
+      // ✅ STORE STAFF INFO
+      localStorage.setItem("staff", JSON.stringify({ 
+        id: data.staff_id, 
+        name: data.name, 
+        email: data.email, 
+        role: data.role 
+      }));
+      
+      // Redirect to dashboard
       router.push("/dashboard");
     } catch (err: any) {
       setError(err.message);
