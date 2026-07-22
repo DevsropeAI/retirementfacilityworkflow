@@ -39,3 +39,28 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Create the file
+echo "# Dependencies" > frontend/.gitignore
+echo "node_modules/" >> frontend/.gitignore
+echo ".pnpm-store/" >> frontend/.gitignore
+echo "" >> frontend/.gitignore
+echo "# Next.js build" >> frontend/.gitignore
+echo ".next/" >> frontend/.gitignore
+echo "out/" >> frontend/.gitignore
+echo "dist/" >> frontend/.gitignore
+echo "" >> frontend/.gitignore
+echo "# Environment" >> frontend/.gitignore
+echo ".env" >> frontend/.gitignore
+echo ".env.local" >> frontend/.gitignore
+echo ".env.*.local" >> frontend/.gitignore
+echo "" >> frontend/.gitignore
+echo "# Logs" >> frontend/.gitignore
+echo "*.log" >> frontend/.gitignore
+echo "npm-debug.log*" >> frontend/.gitignore
+echo "yarn-debug.log*" >> frontend/.gitignore
+echo "yarn-error.log*" >> frontend/.gitignore
+echo "" >> frontend/.gitignore
+echo "# OS" >> frontend/.gitignore
+echo ".DS_Store" >> frontend/.gitignore
+echo "Thumbs.db" >> frontend/.gitignore
