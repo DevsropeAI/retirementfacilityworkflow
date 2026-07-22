@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Brain, RotateCcw } from "lucide-react";
 
 
 import {
@@ -69,7 +70,7 @@ export default function LeadDetailPage() {
   const [saving, setSaving] = useState(false);
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("");
-
+  const [requalifying, setRequalifying] = useState(false);
   useEffect(() => {
     fetchLead();
   }, [leadId]);
@@ -87,6 +88,19 @@ export default function LeadDetailPage() {
       setLoading(false);
     }
   };
+
+  const handleRequalify = async () => {
+  try {
+        setRequalifying(true);
+        const result = await api.post(`/api/leads/${leadId}/requalify`, {});
+        await fetchLead(); // Refresh data
+        // Show success toast or message
+    } catch (error) {
+        console.error("Failed to re-qualify:", error);
+    } finally {
+        setRequalifying(false);
+    }
+    };
 
   const handleSave = async () => {
     try {
@@ -206,6 +220,56 @@ export default function LeadDetailPage() {
           </div>
         </CardContent>
       </Card>
+
+    {/* AI Qualification */}
+    <Card>
+        <CardHeader>
+            <CardTitle className="text-lg flex items-center gap-2">
+            <Brain className="h-5 w-5 text-gray-400" /> AI Qualification
+            </CardTitle>
+        </CardHeader>
+        <CardContent>
+            <div className="space-y-4">
+            <div className="flex items-center gap-4">
+                <div>
+                <span className="text-sm text-gray-500">Score:</span>
+                {lead.qualification_score ? (
+                    <Badge className={`text-lg px-4 py-1 ${
+                    lead.qualification_score === "Hot" ? "bg-red-100 text-red-700" :
+                    lead.qualification_score === "Warm" ? "bg-yellow-100 text-yellow-700" :
+                    "bg-blue-100 text-blue-700"
+                    }`}>
+                    {lead.qualification_score}
+                    </Badge>
+                ) : (
+                    <span className="text-gray-400">Not yet scored</span>
+                )}
+                </div>
+                
+                <Button 
+                variant="outline" 
+                size="sm" 
+                className="gap-2"
+                onClick={handleRequalify}
+                disabled={requalifying}
+                >
+                {requalifying ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                    <RotateCcw className="h-4 w-4" />
+                )}
+                Re-qualify
+                </Button>
+            </div>
+            
+            {lead.qualification_reasoning && (
+                <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="text-sm text-gray-600">{lead.qualification_reasoning}</p>
+                </div>
+            )}
+            </div>
+        </CardContent>
+    </Card>
 
       {/* Lead Management */}
       <Card>
