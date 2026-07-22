@@ -24,7 +24,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}) {
   return response.json();
 }
 
-export default {
+export const api = {
   get: (endpoint: string) => apiFetch(endpoint, { method: "GET" }),
   post: (endpoint: string, data: any) =>
     apiFetch(endpoint, {
@@ -38,3 +38,5 @@ export default {
     }),
   delete: (endpoint: string) => apiFetch(endpoint, { method: "DELETE" }),
 };
+
+export default api;
