@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Search, Plus, User, Eye, Loader2 } from "lucide-react";
+import AddLeadModal from "@/components/AddLeadModal"; 
 import api from "@/lib/api-client";
 import { Lead } from "@/types";
 
@@ -32,6 +33,9 @@ export default function LeadsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  
+  // ✅ ADD THIS STATE FOR THE MODAL
+  const [modalOpen, setModalOpen] = useState(false);
 
   useEffect(() => {
     fetchLeads();
@@ -49,6 +53,11 @@ export default function LeadsPage() {
     }
   };
 
+  // ✅ ADD THIS FUNCTION TO REFRESH LEADS AFTER ADDING
+  const handleLeadAdded = () => {
+    fetchLeads();
+  };
+
   const filteredLeads = leads.filter((lead) => {
     const matchesSearch = lead.name.toLowerCase().includes(search.toLowerCase()) ||
                          lead.email.toLowerCase().includes(search.toLowerCase());
@@ -56,7 +65,6 @@ export default function LeadsPage() {
     return matchesSearch && matchesStatus;
   });
 
-  // Get unique statuses for filter
   const statuses = [...new Set(leads.map((l) => l.status))];
 
   return (
@@ -66,7 +74,8 @@ export default function LeadsPage() {
           <h1 className="text-3xl font-bold text-gray-900">Leads</h1>
           <p className="text-gray-500">Manage and track all your prospective residents.</p>
         </div>
-        <Button className="gap-2">
+        {/* ✅ UPDATE THIS BUTTON — add onClick */}
+        <Button className="gap-2" onClick={() => setModalOpen(true)}>
           <Plus className="h-4 w-4" /> Add Lead
         </Button>
       </div>
@@ -155,6 +164,13 @@ export default function LeadsPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* ✅ ADD THE MODAL HERE — at the bottom of the page */}
+      <AddLeadModal
+        open={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSuccess={handleLeadAdded}
+      />
     </div>
   );
 }
