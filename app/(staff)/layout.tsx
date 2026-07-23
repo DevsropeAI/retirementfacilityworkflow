@@ -1,5 +1,6 @@
 "use client";
 
+import { Calendar } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -34,6 +35,7 @@ const navItems = [
   { href: "/applications", label: "Applications", icon: FileText },
   { href: "/agreements", label: "Agreements", icon: FileCheck },
   { href: "/settings", label: "Settings", icon: Settings },
+  { href: "/consultations", label: "Consultations", icon: Calendar },
 ];
 
 const handleLogout = () => {

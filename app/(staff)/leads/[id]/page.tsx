@@ -9,9 +9,6 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Brain, RotateCcw } from "lucide-react";
-
-
 import {
   Select,
   SelectContent,
@@ -34,9 +31,13 @@ import {
   Users,
   MessageSquare,
   Loader2,
+  Brain,
+  RotateCcw,
+  Calendar as CalendarIcon,
 } from "lucide-react";
 import api from "@/lib/api-client";
 import { Lead } from "@/types";
+import ConsultationModal from "@/components/ConsultationModal";
 
 const statusOptions = [
   "new",
@@ -71,6 +72,8 @@ export default function LeadDetailPage() {
   const [notes, setNotes] = useState("");
   const [status, setStatus] = useState("");
   const [requalifying, setRequalifying] = useState(false);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+
   useEffect(() => {
     fetchLead();
   }, [leadId]);
@@ -90,17 +93,16 @@ export default function LeadDetailPage() {
   };
 
   const handleRequalify = async () => {
-  try {
-        setRequalifying(true);
-        const result = await api.post(`/api/leads/${leadId}/requalify`, {});
-        await fetchLead(); // Refresh data
-        // Show success toast or message
+    try {
+      setRequalifying(true);
+      const result = await api.post(`/api/leads/${leadId}/requalify`, {});
+      await fetchLead();
     } catch (error) {
-        console.error("Failed to re-qualify:", error);
+      console.error("Failed to re-qualify:", error);
     } finally {
-        setRequalifying(false);
+      setRequalifying(false);
     }
-    };
+  };
 
   const handleSave = async () => {
     try {
@@ -109,7 +111,7 @@ export default function LeadDetailPage() {
         status,
         notes,
       });
-      await fetchLead(); // Refresh data
+      await fetchLead();
     } catch (error) {
       console.error("Failed to save:", error);
     } finally {
@@ -160,10 +162,20 @@ export default function LeadDetailPage() {
             </div>
           </div>
         </div>
-        <Button onClick={handleSave} disabled={saving} className="gap-2">
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Save Changes
-        </Button>
+        <div className="flex items-center gap-2">
+          {/* ✅ Book Consultation Button */}
+          <Button 
+            className="gap-2"
+            onClick={() => setShowBookingModal(true)}
+          >
+            <CalendarIcon className="h-4 w-4" /> Book Consultation
+          </Button>
+          
+          <Button onClick={handleSave} disabled={saving} className="gap-2">
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Save Changes
+          </Button>
+        </div>
       </div>
 
       {/* Personal Information */}
@@ -221,55 +233,55 @@ export default function LeadDetailPage() {
         </CardContent>
       </Card>
 
-    {/* AI Qualification */}
-    <Card>
+      {/* AI Qualification */}
+      <Card>
         <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
+          <CardTitle className="text-lg flex items-center gap-2">
             <Brain className="h-5 w-5 text-gray-400" /> AI Qualification
-            </CardTitle>
+          </CardTitle>
         </CardHeader>
         <CardContent>
-            <div className="space-y-4">
+          <div className="space-y-4">
             <div className="flex items-center gap-4">
-                <div>
+              <div>
                 <span className="text-sm text-gray-500">Score:</span>
                 {lead.qualification_score ? (
-                    <Badge className={`text-lg px-4 py-1 ${
+                  <Badge className={`text-lg px-4 py-1 ${
                     lead.qualification_score === "Hot" ? "bg-red-100 text-red-700" :
                     lead.qualification_score === "Warm" ? "bg-yellow-100 text-yellow-700" :
                     "bg-blue-100 text-blue-700"
-                    }`}>
+                  }`}>
                     {lead.qualification_score}
-                    </Badge>
+                  </Badge>
                 ) : (
-                    <span className="text-gray-400">Not yet scored</span>
+                  <span className="text-gray-400">Not yet scored</span>
                 )}
-                </div>
-                
-                <Button 
+              </div>
+              
+              <Button 
                 variant="outline" 
                 size="sm" 
                 className="gap-2"
                 onClick={handleRequalify}
                 disabled={requalifying}
-                >
+              >
                 {requalifying ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                    <RotateCcw className="h-4 w-4" />
+                  <RotateCcw className="h-4 w-4" />
                 )}
                 Re-qualify
-                </Button>
+              </Button>
             </div>
             
             {lead.qualification_reasoning && (
-                <div className="p-4 bg-gray-50 rounded-lg">
+              <div className="p-4 bg-gray-50 rounded-lg">
                 <p className="text-sm text-gray-600">{lead.qualification_reasoning}</p>
-                </div>
+              </div>
             )}
-            </div>
+          </div>
         </CardContent>
-    </Card>
+      </Card>
 
       {/* Lead Management */}
       <Card>
@@ -371,6 +383,17 @@ export default function LeadDetailPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* ✅ Consultation Modal — INSIDE the return statement */}
+      <ConsultationModal
+        open={showBookingModal}
+        onClose={() => setShowBookingModal(false)}
+        leadId={lead.id}
+        leadName={lead.name}
+        onSuccess={() => {
+          fetchLead();
+        }}
+      />
     </div>
   );
 }
