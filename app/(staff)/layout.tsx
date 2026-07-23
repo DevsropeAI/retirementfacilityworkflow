@@ -1,5 +1,6 @@
 "use client";
 
+import NotificationBell from "@/components/NotificationBell";
 import { Calendar } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
@@ -142,10 +143,7 @@ export default function StaffLayout({ children }: { children: React.ReactNode })
             </div>
           </div>
           <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" className="relative">
-              <Bell className="h-5 w-5" />
-              <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></span>
-            </Button>
+            <NotificationBell />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="gap-2">
