@@ -60,6 +60,20 @@ const statusColors: Record<string, string> = {
   no_show: "bg-gray-100 text-gray-700",
 };
 
+const getDateContext = (date: string) => {
+  const today = new Date();
+  const consultDate = new Date(date);
+  
+  // Reset time to compare only dates
+  const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+  const consultDateObj = new Date(consultDate.getFullYear(), consultDate.getMonth(), consultDate.getDate());
+  
+  if (consultDateObj < todayDate) return "past";
+  if (consultDateObj.getTime() === todayDate.getTime()) return "today";
+  return "future";
+};
+
+
 export default function ConsultationsPage() {
   const [consultations, setConsultations] = useState<Consultation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -75,7 +89,8 @@ export default function ConsultationsPage() {
   const fetchConsultations = async () => {
     try {
       setLoading(true);
-      const data = await api.get("/api/consultations");
+      //  Remove upcoming filter to get ALL consultations
+      const data = await api.get("/api/consultations?upcoming=false");
       setConsultations(data);
     } catch (error) {
       console.error("Failed to fetch consultations:", error);
@@ -83,58 +98,102 @@ export default function ConsultationsPage() {
       setLoading(false);
     }
   };
+   useEffect(() => {
+    if (consultations.length > 0) {
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
+      console.log("📅 Today's date:", todayStr);
+      console.log("📋 Consultation dates (raw):", consultations.map(c => c.scheduled_date));
+      console.log("📋 Consultation dates (extracted):", consultations.map(c => c.scheduled_date.split('T')[0]));
+      
+      const todayEvents = getEventsForDate(today);
+      console.log("📊 Events for today:", todayEvents.length);
+    }
+  }, [consultations]);
 
   const getEventsForDate = (date: Date) => {
+    // Format the selected date as YYYY-MM-DD
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
     return consultations.filter((c) => {
-      const consultDate = new Date(c.scheduled_date);
-      return (
-        consultDate.getDate() === date.getDate() &&
-        consultDate.getMonth() === date.getMonth() &&
-        consultDate.getFullYear() === date.getFullYear()
-      );
+      // Extract just the date part from the consultation (YYYY-MM-DD)
+      const consultDateStr = c.scheduled_date.split('T')[0];
+      return consultDateStr === dateStr;
     });
   };
 
+  // const handleDateClick = (date: Date) => {
+  //   const events = getEventsForDate(date);
+  //   if (events.length > 0) {
+  //     setSelectedDate(date);
+  //     setSelectedDayEvents(events);
+  //     setShowDayModal(true);
+  //   }
+  // };
   const handleDateClick = (date: Date) => {
-    const events = getEventsForDate(date);
-    if (events.length > 0) {
-      setSelectedDate(date);
-      setSelectedDayEvents(events);
-      setShowDayModal(true);
-    }
+    setSelectedDate(date);
   };
 
-  const tileContent = ({ date, view }: { date: Date; view: string }) => {
-    if (view === "month") {
-      const dayEvents = getEventsForDate(date);
-      if (dayEvents.length === 0) return null;
-      return (
-        <div className="flex flex-wrap gap-0.5 mt-1 justify-center">
-          {dayEvents.slice(0, 3).map((e) => (
+  //  Updated tileContent with dynamic dot colors
+const tileContent = ({ date, view }: { date: Date; view: string }) => {
+  if (view === "month") {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}`;
+    
+    const dayEvents = consultations.filter((c) => {
+      return c.scheduled_date.split('T')[0] === dateStr;
+    });
+    
+    if (dayEvents.length === 0) return null;
+    return (
+      <div className="flex flex-wrap gap-0.5 mt-1 justify-center">
+        {dayEvents.slice(0, 3).map((e) => {
+          const dotColor = getDateContext(e.scheduled_date) === "past" 
+            ? "#9CA3AF" 
+            : getDateContext(e.scheduled_date) === "today" 
+            ? "#3B82F6" 
+            : "#10B981";
+          return (
             <div
               key={e.id}
               className="w-1.5 h-1.5 rounded-full"
-              style={{ backgroundColor: typeColors[e.consultation_type] }}
+              style={{ backgroundColor: dotColor }}
             />
-          ))}
-          {dayEvents.length > 3 && (
-            <span className="text-[8px] text-gray-400">+{dayEvents.length - 3}</span>
-          )}
-        </div>
-      );
-    }
-    return null;
-  };
+          );
+        })}
+        {dayEvents.length > 3 && (
+          <span className="text-[8px] text-gray-400">+{dayEvents.length - 3}</span>
+        )}
+      </div>
+    );
+  }
+  return null;
+};
 
-  const tileClassName = ({ date, view }: { date: Date; view: string }) => {
+const tileClassName = ({ date, view }: { date: Date; view: string }) => {
     if (view === "month") {
-      const dayEvents = getEventsForDate(date);
-      if (dayEvents.length > 0) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const dateStr = `${year}-${month}-${day}`;
+      
+      const hasEvents = consultations.some((c) => {
+        return c.scheduled_date.split('T')[0] === dateStr;
+      });
+      
+      if (hasEvents) {
         return "hover:bg-blue-50 cursor-pointer transition-colors rounded-lg";
       }
     }
     return "";
   };
+
 
   if (loading) {
     return (
@@ -285,6 +344,7 @@ export default function ConsultationsPage() {
                 })}
               </h3>
               <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+              //  Updated sidebar rendering with labels (replace the existing sidebar map)
                 {getEventsForDate(selectedDate).length === 0 ? (
                   <div className="text-center py-8">
                     <div className="text-4xl mb-2">📭</div>
@@ -293,6 +353,14 @@ export default function ConsultationsPage() {
                 ) : (
                   getEventsForDate(selectedDate).map((c) => {
                     const Icon = typeIcons[c.consultation_type] || CalendarIcon;
+                    const dateContext = getDateContext(c.scheduled_date);
+                    const label = dateContext === "past" ? "Past" : dateContext === "today" ? "Today" : "Upcoming";
+                    const labelColor = dateContext === "past" 
+                      ? "bg-gray-100 text-gray-500" 
+                      : dateContext === "today" 
+                      ? "bg-blue-100 text-blue-600" 
+                      : "bg-green-100 text-green-600";
+
                     return (
                       <Link key={c.id} href={`/leads/${c.lead_id}`}>
                         <div className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-all hover:shadow-sm">
@@ -311,6 +379,9 @@ export default function ConsultationsPage() {
                                   {typeLabels[c.consultation_type]}
                                   <span className="text-gray-300">•</span>
                                   {c.scheduled_time}
+                                  <span className={`text-xs px-1.5 py-0.5 rounded ${labelColor}`}>
+                                    {label}
+                                  </span>
                                 </div>
                               </div>
                             </div>
