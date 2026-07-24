@@ -45,6 +45,7 @@ export default function ConsultationModal({
     consultation_type: "phone",
     scheduled_date: "",
     scheduled_time: "",
+    custom_time: "",  
     duration: "60",
     notes: "",
     meeting_link: "",
@@ -91,14 +92,14 @@ export default function ConsultationModal({
 
   // Generate time slots (9 AM - 6 PM)
   const timeSlots = [];
-  for (let hour = 9; hour <= 17; hour++) {
-    for (let minute of [0, 30]) {
-      const h = hour > 12 ? hour - 12 : hour;
-      const ampm = hour >= 12 ? "PM" : "AM";
-      const time = `${h}:${minute === 0 ? "00" : minute} ${ampm}`;
-      timeSlots.push(time);
+  for (let hour = 8; hour <= 20; hour++) {
+      for (let minute of [0, 15, 30, 45]) {  // 15-minute increments
+        const h = hour > 12 ? hour - 12 : hour;
+        const ampm = hour >= 12 ? "PM" : "AM";
+        const time = `${h}:${minute === 0 ? "00" : minute} ${ampm}`;
+        timeSlots.push(time);
+      }
     }
-  }
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
@@ -152,27 +153,46 @@ export default function ConsultationModal({
           </div>
 
           {/* Time */}
-          <div>
-            <Label htmlFor="scheduled_time">Time *</Label>
+         <div>
+          <Label htmlFor="scheduled_time">Time *</Label>
+          <div className="flex flex-col sm:flex-row gap-2 mt-1">
             <Select 
               value={formData.scheduled_time} 
-              onValueChange={(value) => setFormData({ ...formData, scheduled_time: value })}
+              onValueChange={(value) => {
+                setFormData({ ...formData, scheduled_time: value, custom_time: value });
+              }}
             >
-              <SelectTrigger className="mt-1">
+              <SelectTrigger className="flex-1">
                 <SelectValue placeholder="Select time" />
               </SelectTrigger>
               <SelectContent className="max-h-60">
                 {timeSlots.map((time) => (
                   <SelectItem key={time} value={time}>
-                    <div className="flex items-center gap-2">
-                      <Clock className="h-4 w-4" />
-                      {time}
-                    </div>
+                    {time}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <Input
+              id="scheduled_time"
+              type="text"
+              placeholder="Or type custom time"
+              className="flex-1"
+              value={formData.custom_time}
+              onChange={(e) => {
+                const value = e.target.value;
+                setFormData({ 
+                  ...formData, 
+                  scheduled_time: value,
+                  custom_time: value 
+                });
+              }}
+            />
           </div>
+          <p className="text-xs text-gray-400 mt-1">
+            Pick from dropdown or type a custom time (e.g., 9:15 AM, 14:30)
+          </p>
+        </div>
 
           {/* Duration */}
           <div>

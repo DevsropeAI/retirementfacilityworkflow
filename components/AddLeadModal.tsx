@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { COUNTRIES } from "@/lib/countries";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -229,15 +230,41 @@ export default function AddLeadModal({ open, onClose, onSuccess }: AddLeadModalP
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="desired_country">Desired Country</Label>
+              <Label htmlFor="desired_country">Desired Country</Label>
+              <div className="flex flex-col sm:flex-row gap-2 mt-1">
+                <select
+                  id="desired_country_select"
+                  className="flex-1 rounded-md border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  value={formData.desired_country}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setFormData({ ...formData, desired_country: value });
+                    if (value === "other") {
+                      setFormData({ ...formData, desired_country: "" });
+                    }
+                  }}
+                >
+                  <option value="">Select a country</option>
+                  {COUNTRIES.map((country) => (
+                    <option key={country} value={country}>
+                      {country}
+                    </option>
+                  ))}
+                  <option value="other">Other (type below)</option>
+                </select>
                 <Input
                   id="desired_country"
-                  placeholder="Thailand, Vietnam, Costa Rica..."
+                  type="text"
+                  placeholder="Or type a country not in the list"
+                  className="flex-1"
                   value={formData.desired_country}
-                  onChange={handleChange}
-                  disabled={loading}
+                  onChange={(e) => setFormData({ ...formData, desired_country: e.target.value })}
                 />
               </div>
+              <p className="text-xs text-gray-400 mt-1">
+                Select from the list or type a custom country
+              </p>
+            </div>
               <div>
                 <Label htmlFor="budget">Budget Range</Label>
                 <Input
