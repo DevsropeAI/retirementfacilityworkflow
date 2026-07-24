@@ -126,14 +126,6 @@ export default function ConsultationsPage() {
     });
   };
 
-  // const handleDateClick = (date: Date) => {
-  //   const events = getEventsForDate(date);
-  //   if (events.length > 0) {
-  //     setSelectedDate(date);
-  //     setSelectedDayEvents(events);
-  //     setShowDayModal(true);
-  //   }
-  // };
   const handleDateClick = (date: Date) => {
     setSelectedDate(date);
   };
@@ -344,7 +336,6 @@ const tileClassName = ({ date, view }: { date: Date; view: string }) => {
                 })}
               </h3>
               <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
-              //  Updated sidebar rendering with labels (replace the existing sidebar map)
                 {getEventsForDate(selectedDate).length === 0 ? (
                   <div className="text-center py-8">
                     <div className="text-4xl mb-2">📭</div>
@@ -405,16 +396,40 @@ const tileClassName = ({ date, view }: { date: Date; view: string }) => {
         </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {consultations.length === 0 ? (
-            <Card className="col-span-full">
-              <CardContent className="text-center py-12">
-                <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-500">No consultations scheduled</p>
-              </CardContent>
-            </Card>
-          ) : (
-            consultations.map((consultation) => {
+          {(() => {
+            // ✅ Get today's date without time
+            const today = new Date();
+            const todayDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+            // ✅ Filter: Only today and future consultations
+            const upcomingConsultations = consultations
+              .filter((c) => {
+                const consultDate = new Date(c.scheduled_date);
+                const consultDateObj = new Date(consultDate.getFullYear(), consultDate.getMonth(), consultDate.getDate());
+                return consultDateObj >= todayDate;
+              })
+              .sort((a, b) => new Date(a.scheduled_date).getTime() - new Date(b.scheduled_date).getTime());
+
+            if (upcomingConsultations.length === 0) {
+              return (
+                <Card className="col-span-full">
+                  <CardContent className="text-center py-12">
+                    <CalendarIcon className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+                    <p className="text-gray-500">No upcoming consultations</p>
+                    <p className="text-sm text-gray-400">Today's and future consultations will appear here.</p>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            return upcomingConsultations.map((consultation) => {
               const Icon = typeIcons[consultation.consultation_type] || CalendarIcon;
+              
+              // ✅ Determine if today or upcoming
+              const consultDate = new Date(consultation.scheduled_date);
+              const consultDateObj = new Date(consultDate.getFullYear(), consultDate.getMonth(), consultDate.getDate());
+              const isToday = consultDateObj.getTime() === todayDate.getTime();
+
               return (
                 <Link key={consultation.id} href={`/leads/${consultation.lead_id}`}>
                   <Card className="hover:shadow-md transition-shadow cursor-pointer">
@@ -431,6 +446,11 @@ const tileClassName = ({ date, view }: { date: Date; view: string }) => {
                       </div>
                       <div className="text-sm text-gray-600">
                         {new Date(consultation.scheduled_date).toLocaleDateString()} at {consultation.scheduled_time}
+                        <span className={`ml-2 text-xs px-2 py-0.5 rounded ${
+                          isToday ? "bg-blue-100 text-blue-600" : "bg-green-100 text-green-600"
+                        }`}>
+                          {isToday ? "Today" : "Upcoming"}
+                        </span>
                       </div>
                       {consultation.meeting_link && (
                         <div className="text-sm text-blue-600 truncate">
@@ -441,8 +461,8 @@ const tileClassName = ({ date, view }: { date: Date; view: string }) => {
                   </Card>
                 </Link>
               );
-            })
-          )}
+            });
+          })()}
         </div>
       )}
     </div>
