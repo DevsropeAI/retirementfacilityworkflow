@@ -34,6 +34,8 @@ import {
   Brain,
   RotateCcw,
   Calendar as CalendarIcon,
+  Send,
+  CheckCircle,
 } from "lucide-react";
 import api from "@/lib/api-client";
 import { Lead } from "@/types";
@@ -73,6 +75,10 @@ export default function LeadDetailPage() {
   const [status, setStatus] = useState("");
   const [requalifying, setRequalifying] = useState(false);
   const [showBookingModal, setShowBookingModal] = useState(false);
+  const [sendingApplication, setSendingApplication] = useState(false);
+  const [applicationStatus, setApplicationStatus] = useState<string | null>(
+    null
+  );
 
   useEffect(() => {
     fetchLead();
@@ -85,6 +91,10 @@ export default function LeadDetailPage() {
       setLead(data);
       setNotes(data.notes || "");
       setStatus(data.status);
+      // Check if application was sent
+      if (data.application_status) {
+        setApplicationStatus(data.application_status);
+      }
     } catch (error) {
       console.error("Failed to fetch lead:", error);
     } finally {
@@ -95,7 +105,7 @@ export default function LeadDetailPage() {
   const handleRequalify = async () => {
     try {
       setRequalifying(true);
-      const result = await api.post(`/api/leads/${leadId}/requalify`, {});
+      await api.post(`/api/leads/${leadId}/requalify`, {});
       await fetchLead();
     } catch (error) {
       console.error("Failed to re-qualify:", error);
@@ -116,6 +126,24 @@ export default function LeadDetailPage() {
       console.error("Failed to save:", error);
     } finally {
       setSaving(false);
+    }
+  };
+
+  // ✅ Send Application Handler
+  const handleSendApplication = async () => {
+    try {
+      setSendingApplication(true);
+      const response = await api.post(`/api/leads/${leadId}/send-application`);
+      setApplicationStatus("sent");
+      alert(
+        `✅ Application link sent to ${lead?.email}\n\nLink: ${response.link}`
+      );
+      await fetchLead();
+    } catch (error: any) {
+      console.error("Failed to send application:", error);
+      alert(error.message || "Failed to send application");
+    } finally {
+      setSendingApplication(false);
     }
   };
 
@@ -163,16 +191,36 @@ export default function LeadDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* ✅ Book Consultation Button */}
-          <Button 
+          {/* ✅ Send Application Button */}
+          <Button
+            variant="outline"
+            className="gap-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+            onClick={handleSendApplication}
+            disabled={sendingApplication || applicationStatus === "sent"}
+          >
+            {sendingApplication ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : applicationStatus === "sent" ? (
+              <CheckCircle className="h-4 w-4" />
+            ) : (
+              <Send className="h-4 w-4" />
+            )}
+            {applicationStatus === "sent" ? "Sent" : "Send Application"}
+          </Button>
+
+          <Button
             className="gap-2"
             onClick={() => setShowBookingModal(true)}
           >
             <CalendarIcon className="h-4 w-4" /> Book Consultation
           </Button>
-          
+
           <Button onClick={handleSave} disabled={saving} className="gap-2">
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="h-4 w-4" />
+            )}
             Save Changes
           </Button>
         </div>
@@ -205,7 +253,9 @@ export default function LeadDetailPage() {
             <div className="flex items-center gap-2">
               <MapPin className="h-4 w-4 text-gray-400" />
               <span className="text-sm text-gray-500">Location:</span>
-              <span className="font-medium">{lead.current_location || "Not set"}</span>
+              <span className="font-medium">
+                {lead.current_location || "Not set"}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Calendar className="h-4 w-4 text-gray-400" />
@@ -216,18 +266,24 @@ export default function LeadDetailPage() {
               <DollarSign className="h-4 w-4 text-gray-400" />
               <span className="text-sm text-gray-500">Monthly Income:</span>
               <span className="font-medium">
-                {lead.monthly_income ? `$${lead.monthly_income.toLocaleString()}` : "Not set"}
+                {lead.monthly_income
+                  ? `$${lead.monthly_income.toLocaleString()}`
+                  : "Not set"}
               </span>
             </div>
             <div className="flex items-center gap-2">
               <Globe className="h-4 w-4 text-gray-400" />
               <span className="text-sm text-gray-500">Desired Country:</span>
-              <span className="font-medium">{lead.desired_country || "Not set"}</span>
+              <span className="font-medium">
+                {lead.desired_country || "Not set"}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               <Clock className="h-4 w-4 text-gray-400" />
               <span className="text-sm text-gray-500">Move Date:</span>
-              <span className="font-medium">{lead.desired_move_date || "Not set"}</span>
+              <span className="font-medium">
+                {lead.desired_move_date || "Not set"}
+              </span>
             </div>
           </div>
         </CardContent>
@@ -246,21 +302,25 @@ export default function LeadDetailPage() {
               <div>
                 <span className="text-sm text-gray-500">Score:</span>
                 {lead.qualification_score ? (
-                  <Badge className={`text-lg px-4 py-1 ${
-                    lead.qualification_score === "Hot" ? "bg-red-100 text-red-700" :
-                    lead.qualification_score === "Warm" ? "bg-yellow-100 text-yellow-700" :
-                    "bg-blue-100 text-blue-700"
-                  }`}>
+                  <Badge
+                    className={`text-lg px-4 py-1 ${
+                      lead.qualification_score === "Hot"
+                        ? "bg-red-100 text-red-700"
+                        : lead.qualification_score === "Warm"
+                        ? "bg-yellow-100 text-yellow-700"
+                        : "bg-blue-100 text-blue-700"
+                    }`}
+                  >
                     {lead.qualification_score}
                   </Badge>
                 ) : (
                   <span className="text-gray-400">Not yet scored</span>
                 )}
               </div>
-              
-              <Button 
-                variant="outline" 
-                size="sm" 
+
+              <Button
+                variant="outline"
+                size="sm"
                 className="gap-2"
                 onClick={handleRequalify}
                 disabled={requalifying}
@@ -273,10 +333,12 @@ export default function LeadDetailPage() {
                 Re-qualify
               </Button>
             </div>
-            
+
             {lead.qualification_reasoning && (
               <div className="p-4 bg-gray-50 rounded-lg">
-                <p className="text-sm text-gray-600">{lead.qualification_reasoning}</p>
+                <p className="text-sm text-gray-600">
+                  {lead.qualification_reasoning}
+                </p>
               </div>
             )}
           </div>
@@ -384,7 +446,7 @@ export default function LeadDetailPage() {
         </CardContent>
       </Card>
 
-      {/* ✅ Consultation Modal — INSIDE the return statement */}
+      {/* Consultation Modal */}
       <ConsultationModal
         open={showBookingModal}
         onClose={() => setShowBookingModal(false)}

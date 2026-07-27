@@ -19,6 +19,7 @@ export default function ApplyPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [leadId, setLeadId] = useState<number | null>(null);
+  const [isValidating, setIsValidating] = useState(true);
 
   const [formData, setFormData] = useState({
     full_name: "",
@@ -51,25 +52,44 @@ export default function ApplyPage() {
     insurance: null,
   });
 
-  // Fetch lead info from token
+  // Validate token and fetch lead info
   useEffect(() => {
-    const fetchLeadInfo = async () => {
+    const validateToken = async () => {
+      if (!token) {
+        setError("Invalid application link");
+        setIsValidating(false);
+        return;
+      }
+
       try {
-        // In a real implementation, you'd have an endpoint to validate the token
-        // For now, we'll simulate by extracting lead_id from the token
-        // This is a placeholder — you'll need to implement token validation
-        console.log("Token:", token);
-        // For testing: set a default lead_id
-        // In production, you'd call: /api/applications/token/{token}
-        setLeadId(1); // Placeholder
-      } catch (err) {
-        setError("Invalid or expired application link");
+        const response = await fetch(
+          `http://localhost:8000/api/applications/validate-token/${token}`
+        );
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.detail || "Invalid or expired token");
+        }
+        const data = await response.json();
+        setLeadId(data.lead_id);
+        setFormData((prev) => ({
+          ...prev,
+          full_name: data.lead_name || "",
+          email: data.lead_email || "",
+          phone: data.lead_phone || "",
+        }));
+      } catch (err: any) {
+        setError(err.message || "Invalid or expired application link");
+      } finally {
+        setIsValidating(false);
       }
     };
-    fetchLeadInfo();
+
+    validateToken();
   }, [token]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setFormData({ ...formData, [e.target.id]: e.target.value });
   };
 
@@ -89,7 +109,10 @@ export default function ApplyPage() {
         lead_id: leadId,
       };
 
-      const response = await api.post("/api/applications/public/submit", applicationData);
+      const response = await api.post(
+        "/api/applications/public/submit",
+        applicationData
+      );
       const applicationId = response.application_id;
 
       // Upload documents
@@ -98,11 +121,14 @@ export default function ApplyPage() {
           const formData = new FormData();
           formData.append("document_type", type);
           formData.append("file", file);
-          
-          await fetch(`http://localhost:8000/api/applications/public/upload/${applicationId}`, {
-            method: "POST",
-            body: formData,
-          });
+
+          await fetch(
+            `http://localhost:8000/api/applications/public/upload/${applicationId}`,
+            {
+              method: "POST",
+              body: formData,
+            }
+          );
         }
       }
 
@@ -114,21 +140,10 @@ export default function ApplyPage() {
     }
   };
 
-  if (submitted) {
+  if (isValidating) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
-        <Card className="max-w-md w-full text-center">
-          <CardContent className="pt-12 pb-8">
-            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900">Application Submitted!</h2>
-            <p className="text-gray-600 mt-2">
-              Thank you for your application. Our team will review it and get back to you soon.
-            </p>
-            <Button className="mt-6" onClick={() => router.push("/")}>
-              Return to Homepage
-            </Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
       </div>
     );
   }
@@ -150,12 +165,38 @@ export default function ApplyPage() {
     );
   }
 
+  if (submitted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+        <Card className="max-w-md w-full text-center">
+          <CardContent className="pt-12 pb-8">
+            <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-900">
+              Application Submitted!
+            </h2>
+            <p className="text-gray-600 mt-2">
+              Thank you for your application. Our team will review it and get
+              back to you soon.
+            </p>
+            <Button className="mt-6" onClick={() => router.push("/")}>
+              Return to Homepage
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Application for Residency</h1>
-          <p className="text-gray-600 mt-2">Please fill out this form to complete your application.</p>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Application for Residency
+          </h1>
+          <p className="text-gray-600 mt-2">
+            Please fill out this form to complete your application.
+          </p>
         </div>
 
         <Card>
@@ -163,119 +204,237 @@ export default function ApplyPage() {
             <form onSubmit={handleSubmit} className="space-y-8">
               {/* Personal Information */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Personal Information
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="full_name">Full Name *</Label>
-                    <Input id="full_name" required value={formData.full_name} onChange={handleChange} />
+                    <Input
+                      id="full_name"
+                      required
+                      value={formData.full_name}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="email">Email *</Label>
-                    <Input id="email" type="email" required value={formData.email} onChange={handleChange} />
+                    <Input
+                      id="email"
+                      type="email"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="phone">Phone *</Label>
-                    <Input id="phone" required value={formData.phone} onChange={handleChange} />
+                    <Input
+                      id="phone"
+                      required
+                      value={formData.phone}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="date_of_birth">Date of Birth</Label>
-                    <Input id="date_of_birth" type="date" value={formData.date_of_birth} onChange={handleChange} />
+                    <Input
+                      id="date_of_birth"
+                      type="date"
+                      value={formData.date_of_birth}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="nationality">Nationality</Label>
-                    <Input id="nationality" value={formData.nationality} onChange={handleChange} />
+                    <Input
+                      id="nationality"
+                      value={formData.nationality}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="marital_status">Marital Status</Label>
-                    <Input id="marital_status" placeholder="Single, Married, Divorced, Widowed" value={formData.marital_status} onChange={handleChange} />
+                    <Input
+                      id="marital_status"
+                      placeholder="Single, Married, Divorced, Widowed"
+                      value={formData.marital_status}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="current_address">Current Address</Label>
-                    <Input id="current_address" value={formData.current_address} onChange={handleChange} />
+                    <Input
+                      id="current_address"
+                      value={formData.current_address}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="occupation">Occupation</Label>
-                    <Input id="occupation" value={formData.occupation} onChange={handleChange} />
+                    <Input
+                      id="occupation"
+                      value={formData.occupation}
+                      onChange={handleChange}
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Emergency Contact */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Emergency Contact</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Emergency Contact
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="emergency_name">Emergency Contact Name</Label>
-                    <Input id="emergency_name" value={formData.emergency_name} onChange={handleChange} />
+                    <Label htmlFor="emergency_name">
+                      Emergency Contact Name
+                    </Label>
+                    <Input
+                      id="emergency_name"
+                      value={formData.emergency_name}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="emergency_relationship">Relationship</Label>
-                    <Input id="emergency_relationship" value={formData.emergency_relationship} onChange={handleChange} />
+                    <Input
+                      id="emergency_relationship"
+                      value={formData.emergency_relationship}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="emergency_phone">Emergency Phone</Label>
-                    <Input id="emergency_phone" value={formData.emergency_phone} onChange={handleChange} />
+                    <Input
+                      id="emergency_phone"
+                      value={formData.emergency_phone}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="emergency_email">Emergency Email</Label>
-                    <Input id="emergency_email" type="email" value={formData.emergency_email} onChange={handleChange} />
+                    <Input
+                      id="emergency_email"
+                      type="email"
+                      value={formData.emergency_email}
+                      onChange={handleChange}
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Medical Information */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Medical Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Medical Information
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="md:col-span-2">
-                    <Label htmlFor="medical_conditions">Medical Conditions</Label>
-                    <Textarea id="medical_conditions" rows={2} value={formData.medical_conditions} onChange={handleChange} />
+                    <Label htmlFor="medical_conditions">
+                      Medical Conditions
+                    </Label>
+                    <Textarea
+                      id="medical_conditions"
+                      rows={2}
+                      value={formData.medical_conditions}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="medications">Current Medications</Label>
-                    <Textarea id="medications" rows={2} value={formData.medications} onChange={handleChange} />
+                    <Textarea
+                      id="medications"
+                      rows={2}
+                      value={formData.medications}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div className="md:col-span-2">
                     <Label htmlFor="allergies">Allergies</Label>
-                    <Textarea id="allergies" rows={2} value={formData.allergies} onChange={handleChange} />
+                    <Textarea
+                      id="allergies"
+                      rows={2}
+                      value={formData.allergies}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="doctor_name">Primary Doctor</Label>
-                    <Input id="doctor_name" value={formData.doctor_name} onChange={handleChange} />
+                    <Input
+                      id="doctor_name"
+                      value={formData.doctor_name}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
                     <Label htmlFor="doctor_phone">Doctor's Phone</Label>
-                    <Input id="doctor_phone" value={formData.doctor_phone} onChange={handleChange} />
+                    <Input
+                      id="doctor_phone"
+                      value={formData.doctor_phone}
+                      onChange={handleChange}
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Preferences */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Preferences</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Preferences
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="preferred_move_date">Preferred Move Date</Label>
-                    <Input id="preferred_move_date" type="date" value={formData.preferred_move_date} onChange={handleChange} />
+                    <Label htmlFor="preferred_move_date">
+                      Preferred Move Date
+                    </Label>
+                    <Input
+                      id="preferred_move_date"
+                      type="date"
+                      value={formData.preferred_move_date}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
-                    <Label htmlFor="preferred_country">Preferred Country</Label>
-                    <Input id="preferred_country" value={formData.preferred_country} onChange={handleChange} />
+                    <Label htmlFor="preferred_country">
+                      Preferred Country
+                    </Label>
+                    <Input
+                      id="preferred_country"
+                      value={formData.preferred_country}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div>
-                    <Label htmlFor="preferred_facility">Preferred Facility</Label>
-                    <Input id="preferred_facility" value={formData.preferred_facility} onChange={handleChange} />
+                    <Label htmlFor="preferred_facility">
+                      Preferred Facility
+                    </Label>
+                    <Input
+                      id="preferred_facility"
+                      value={formData.preferred_facility}
+                      onChange={handleChange}
+                    />
                   </div>
                   <div className="md:col-span-2">
-                    <Label htmlFor="special_requirements">Special Requirements</Label>
-                    <Textarea id="special_requirements" rows={2} value={formData.special_requirements} onChange={handleChange} />
+                    <Label htmlFor="special_requirements">
+                      Special Requirements
+                    </Label>
+                    <Textarea
+                      id="special_requirements"
+                      rows={2}
+                      value={formData.special_requirements}
+                      onChange={handleChange}
+                    />
                   </div>
                 </div>
               </div>
 
               {/* Document Upload */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Documents</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                  Documents
+                </h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {[
                     { type: "passport", label: "Passport" },
@@ -289,7 +448,12 @@ export default function ApplyPage() {
                         <input
                           type="file"
                           id={`doc_${doc.type}`}
-                          onChange={(e) => handleFileChange(doc.type, e.target.files?.[0] || null)}
+                          onChange={(e) =>
+                            handleFileChange(
+                              doc.type,
+                              e.target.files?.[0] || null
+                            )
+                          }
                           className="hidden"
                           accept=".pdf,.jpg,.jpeg,.png"
                         />
@@ -307,7 +471,9 @@ export default function ApplyPage() {
                           ) : (
                             <>
                               <Upload className="h-5 w-5 text-gray-400" />
-                              <span className="text-sm text-gray-500">Upload {doc.label}</span>
+                              <span className="text-sm text-gray-500">
+                                Upload {doc.label}
+                              </span>
                             </>
                           )}
                         </label>
@@ -324,10 +490,16 @@ export default function ApplyPage() {
                 </div>
               )}
 
-              <Button type="submit" size="lg" className="w-full" disabled={loading}>
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full"
+                disabled={loading}
+              >
                 {loading ? (
                   <>
-                    <Loader2 className="h-4 w-4 animate-spin mr-2" /> Submitting...
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />{" "}
+                    Submitting...
                   </>
                 ) : (
                   "Submit Application"
