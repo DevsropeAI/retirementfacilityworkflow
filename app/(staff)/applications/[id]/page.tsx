@@ -161,7 +161,7 @@ export default function ApplicationDetailPage() {
     }
   };
 
-  // ✅ Reopen
+  //  Reopen
   const handleReopen = async () => {
     try {
       setSaving(true);
@@ -175,18 +175,93 @@ export default function ApplicationDetailPage() {
     }
   };
 
-  // ✅ Download Document
-  const handleDownload = async (documentId: number) => {
-    try {
-      const token = localStorage.getItem("token");
-      window.open(
-        `http://localhost:8000/api/applications/${id}/documents/${documentId}/download`,
-        "_blank"
-      );
-    } catch (error) {
-      console.error("Failed to download:", error);
+  //  Download Document
+const handleDownload = async (documentId: number) => {
+  console.log("🟢 Download clicked for document:", documentId);
+  
+  try {
+    const token = localStorage.getItem("token");
+    console.log("🔑 Token exists?", !!token);
+    console.log("🔑 Token being sent:", token);
+    console.log("🔑 Token starts with:", token ? token.substring(0, 20) + "..." : "null");
+    
+    if (!token) {
+      console.error("❌ No token found in localStorage");
+      alert("You must be logged in to download documents.");
+      return;
     }
-  };
+    
+    const url = `http://localhost:8000/api/applications/${id}/documents/${documentId}/download`;
+    console.log("📡 Fetching URL:", url);
+    
+    const response = await fetch(url, {
+      method: "GET",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+      },
+    });
+    
+    console.log("📡 Response status:", response.status);
+    console.log("📡 Response headers:", [...response.headers.entries()]);
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ Error response:", errorText);
+      throw new Error(`Download failed: ${response.status} ${response.statusText}`);
+    }
+    
+    const contentType = response.headers.get("Content-Type");
+    console.log("📡 Content-Type:", contentType);
+    
+    // If the response is JSON, it's likely an error
+    if (contentType && contentType.includes("application/json")) {
+      const error = await response.json();
+      console.error("❌ Server returned JSON error:", error);
+      alert(error.detail || "Server error");
+      return;
+    }
+    
+    const blob = await response.blob();
+    console.log("📦 Blob size:", blob.size, "bytes");
+    console.log("📦 Blob type:", blob.type);
+    
+    if (blob.size === 0) {
+      console.error("❌ Downloaded file is empty (0 bytes)");
+      alert("Downloaded file is empty");
+      return;
+    }
+    
+    const contentDisposition = response.headers.get("Content-Disposition");
+    console.log("📎 Content-Disposition:", contentDisposition);
+    
+    let filename = `document_${documentId}`;
+    if (contentDisposition) {
+      const match = contentDisposition.match(/filename="(.+)"/);
+      if (match) filename = match[1];
+    }
+    console.log("📎 Filename:", filename);
+    
+    const urlBlob = window.URL.createObjectURL(blob);
+    console.log("🔗 Blob URL created:", urlBlob.substring(0, 50) + "...");
+    
+    const a = document.createElement("a");
+    a.href = urlBlob;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    
+    setTimeout(() => {
+      window.URL.revokeObjectURL(urlBlob);
+      a.remove();
+    }, 100);
+    
+    console.log("✅ Download initiated");
+    
+  } catch (error: any) {
+    console.error("❌ Download error:", error);
+    alert(error.message || "Failed to download document. Please try again.");
+  }
+};
 
   if (loading) {
     return (
