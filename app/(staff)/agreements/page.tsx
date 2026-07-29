@@ -5,7 +5,18 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, FileText, Eye, Download, CheckCircle, Clock, XCircle } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { Loader2, FileText, Eye, Download, CheckCircle, Clock, XCircle, Trash2 } from "lucide-react";
 import api from "@/lib/api-client";
 
 interface Agreement {
@@ -52,6 +63,7 @@ export default function AgreementsPage() {
   const [agreements, setAgreements] = useState<Agreement[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("");
+  const [deleteLoading, setDeleteLoading] = useState<number | null>(null);
 
   useEffect(() => {
     fetchAgreements();
@@ -66,6 +78,19 @@ export default function AgreementsPage() {
       console.error("Failed to fetch agreements:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    try {
+      setDeleteLoading(id);
+      await api.delete(`/api/agreements/${id}`);
+      fetchAgreements();
+    } catch (error) {
+      console.error("Failed to delete agreement:", error);
+      alert("Failed to delete agreement. Please try again.");
+    } finally {
+      setDeleteLoading(null);
     }
   };
 
@@ -124,38 +149,79 @@ export default function AgreementsPage() {
           filteredAgreements.map((agreement) => {
             const Icon = statusIcons[agreement.status] || FileText;
             return (
-              <Link key={agreement.id} href={`/agreements/${agreement.id}`}>
-                <Card className="hover:shadow-md transition-shadow cursor-pointer">
-                  <CardHeader className="pb-2">
-                    <div className="flex justify-between items-start">
-                      <CardTitle className="text-sm font-medium text-gray-500">
-                        {agreement.agreement_number}
-                      </CardTitle>
-                      <Badge className={statusColors[agreement.status] || "bg-gray-100"}>
-                        <Icon className="h-3 w-3 mr-1" />
-                        {statusLabels[agreement.status] || agreement.status}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="space-y-1">
-                    <h3 className="font-semibold text-gray-900">{agreement.lead_name}</h3>
-                    <p className="text-sm text-gray-600">{agreement.facility}</p>
-                    {agreement.room_number && (
-                      <p className="text-sm text-gray-600">Room: {agreement.room_number}</p>
-                    )}
-                    <p className="text-sm text-gray-600">
-                      Monthly Fee: ${agreement.monthly_fee.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      Created: {new Date(agreement.created_at).toLocaleDateString()}
-                    </p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <Eye className="h-4 w-4 text-gray-400" />
-                      <span className="text-sm text-blue-600">View Agreement</span>
-                    </div>
-                  </CardContent>
-                </Card>
-              </Link>
+              <Card key={agreement.id} className="hover:shadow-md transition-shadow">
+                <CardHeader className="pb-2">
+                  <div className="flex justify-between items-start">
+                    <CardTitle className="text-sm font-medium text-gray-500">
+                      {agreement.agreement_number}
+                    </CardTitle>
+                    <Badge className={statusColors[agreement.status] || "bg-gray-100"}>
+                      <Icon className="h-3 w-3 mr-1" />
+                      {statusLabels[agreement.status] || agreement.status}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-1">
+                  <h3 className="font-semibold text-gray-900">{agreement.lead_name}</h3>
+                  <p className="text-sm text-gray-600">{agreement.facility}</p>
+                  {agreement.room_number && (
+                    <p className="text-sm text-gray-600">Room: {agreement.room_number}</p>
+                  )}
+                  <p className="text-sm text-gray-600">
+                    Monthly Fee: ${agreement.monthly_fee.toLocaleString()}
+                  </p>
+                  <p className="text-xs text-gray-400">
+                    Created: {new Date(agreement.created_at).toLocaleDateString()}
+                  </p>
+                  
+                  {/* Actions */}
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <Link href={`/agreements/${agreement.id}`}>
+                      <Button variant="outline" size="sm" className="gap-1">
+                        <Eye className="h-3 w-3" /> View
+                      </Button>
+                    </Link>
+                    
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" size="sm" className="gap-1 text-red-500 hover:text-red-600 hover:bg-red-50">
+                          <Trash2 className="h-3 w-3" /> Delete
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete the agreement for <strong>{agreement.lead_name}</strong>.
+                            {agreement.status === "signed" && (
+                              <span className="block text-red-500 mt-2">
+                                ⚠️ This is a signed agreement. Deleting it will remove the signed document.
+                              </span>
+                            )}
+                            This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleDelete(agreement.id)}
+                            className="bg-red-600 hover:bg-red-700"
+                            disabled={deleteLoading === agreement.id}
+                          >
+                            {deleteLoading === agreement.id ? (
+                              <>
+                                <Loader2 className="h-4 w-4 animate-spin mr-2" /> Deleting...
+                              </>
+                            ) : (
+                              "Delete"
+                            )}
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </CardContent>
+              </Card>
             );
           })
         )}
