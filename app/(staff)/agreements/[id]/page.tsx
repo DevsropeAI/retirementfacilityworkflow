@@ -88,12 +88,43 @@ export default function AgreementDetailPage() {
   const handleDownload = async () => {
     if (!agreement) return;
     try {
-      window.open(
+      const token = localStorage.getItem("token");
+      
+      const response = await fetch(
         `http://localhost:8000/api/agreements/${agreement.id}/download`,
-        "_blank"
+        {
+          method: "GET",
+          headers: {
+            "Authorization": `Bearer ${token}`,
+          },
+        }
       );
+      
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(error || "Download failed");
+      }
+      
+      const contentDisposition = response.headers.get("Content-Disposition");
+      let filename = `agreement_${agreement.agreement_number}.pdf`;
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);
+        if (match) filename = match[1];
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      
     } catch (error) {
-      console.error("Failed to download:", error);
+      console.error("Failed to download PDF:", error);
+      alert("Failed to download PDF. Please try again.");
     }
   };
 
@@ -105,10 +136,11 @@ export default function AgreementDetailPage() {
     );
   }
 
+  // ✅ Guard clause: if no agreement, show error
   if (!agreement) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">Agreement not found</p>
+        <p className="text-red-500">Agreement not found</p>
         <Link href="/agreements">
           <Button className="mt-4">Back to Agreements</Button>
         </Link>
