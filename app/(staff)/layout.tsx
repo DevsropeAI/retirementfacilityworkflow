@@ -34,7 +34,7 @@ const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
   { href: "/leads", label: "Leads", icon: Users },
   { href: "/applications", label: "Applications", icon: FileText },
-  { href: "/agreements", label: "Agreements", icon: FileCheck },
+   { href: "/agreements", label: "Agreements", icon: FileCheck },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/consultations", label: "Consultations", icon: Calendar },
 ];

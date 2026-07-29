@@ -13,6 +13,7 @@ import {
   Loader2,
   CheckCircle,
   XCircle,
+  Clock,
   FileText,
   Download,
   User,
@@ -181,7 +182,7 @@ export default function ApplicationDetailPage() {
       const url = `http://localhost:8000/api/applications/${id}/documents/${documentId}/download`;
       const response = await fetch(url, {
         method: "GET",
-        headers: { Authorization: `Bearer ${token}` },
+        headers: { "Authorization": `Bearer ${token}` },
       });
       if (!response.ok) {
         const errorText = await response.text();
@@ -240,7 +241,7 @@ export default function ApplicationDetailPage() {
     );
   }
 
-  const isApproved = application.status === "approved" || application.status === "Approved";
+  const isApproved = application.status === "approved";
   const isRejected = application.status === "rejected";
   const canReview = ["submitted", "under_review"].includes(application.status);
 
@@ -260,7 +261,9 @@ export default function ApplicationDetailPage() {
               <Badge className={statusColors[application.status] || "bg-gray-100"}>
                 {application.status}
               </Badge>
-              <span className="text-sm text-gray-500">Lead: {application.lead_name}</span>
+              <span className="text-sm text-gray-500">
+                Lead: {application.lead_name}
+              </span>
             </div>
           </div>
         </div>
@@ -303,6 +306,7 @@ export default function ApplicationDetailPage() {
               <Button variant="outline" className="border-green-500 text-green-600" disabled>
                 <CheckCircle className="h-4 w-4 mr-2" /> Approved
               </Button>
+              {/* ✅ Generate Agreement Button */}
               <Button
                 variant="outline"
                 className="gap-2 border-blue-500 text-blue-600 hover:bg-blue-50"
@@ -526,11 +530,13 @@ export default function ApplicationDetailPage() {
               Save Notes
             </Button>
           </div>
-          <p className="text-xs text-gray-400">These notes are only visible to staff members.</p>
+          <p className="text-xs text-gray-400">
+            These notes are only visible to staff members.
+          </p>
         </CardContent>
       </Card>
 
-      {/* Generate Agreement Modal */}
+      {/* ✅ Generate Agreement Modal */}
       <GenerateAgreementModal
         open={showAgreementModal}
         onClose={() => setShowAgreementModal(false)}
