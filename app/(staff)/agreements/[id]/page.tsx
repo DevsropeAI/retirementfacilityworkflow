@@ -5,220 +5,95 @@ import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import GenerateAgreementModal from "@/components/GenerateAgreementModal";
 import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  ArrowLeft,
-  Loader2,
-  CheckCircle,
-  XCircle,
-  Clock,
-  FileText,
-  Download,
-  User,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
-  Heart,
-  FileCheck,
-  Building2,
-  RefreshCw,
-  Save,
-} from "lucide-react";
+import { Loader2, ArrowLeft, Download, Mail, FileText, CheckCircle, Clock } from "lucide-react";
 import api from "@/lib/api-client";
 
-interface Application {
+interface Agreement {
   id: number;
   lead_id: number;
-  full_name: string;
-  email: string;
-  phone: string;
-  date_of_birth: string | null;
-  nationality: string | null;
-  current_address: string | null;
-  marital_status: string | null;
-  occupation: string | null;
-  emergency_name: string | null;
-  emergency_relationship: string | null;
-  emergency_phone: string | null;
-  emergency_email: string | null;
-  medical_conditions: string | null;
-  medications: string | null;
-  allergies: string | null;
-  doctor_name: string | null;
-  doctor_phone: string | null;
-  preferred_move_date: string | null;
-  preferred_country: string | null;
-  preferred_facility: string | null;
-  special_requirements: string | null;
+  application_id: number | null;
+  agreement_number: string;
+  facility: string;
+  room_number: string | null;
+  move_in_date: string;
+  monthly_fee: number;
+  security_deposit: number | null;
+  terms_conditions: string | null;
   status: string;
-  notes: string | null;
+  token: string | null;
+  signed_at: string | null;
+  signed_pdf_path: string | null;
   created_at: string;
-  submitted_at: string | null;
-  documents: Document[];
+  sent_at: string | null;
   lead_name: string;
   lead_email: string;
-}
-
-interface Document {
-  id: number;
-  application_id: number;
-  document_type: string;
-  file_name: string;
-  file_path: string;
-  file_size: number | null;
-  file_type: string | null;
-  uploaded_at: string;
+  lead_phone: string;
 }
 
 const statusColors: Record<string, string> = {
   draft: "bg-gray-100 text-gray-700",
-  submitted: "bg-yellow-100 text-yellow-700",
-  under_review: "bg-blue-100 text-blue-700",
-  approved: "bg-green-100 text-green-700",
-  rejected: "bg-red-100 text-red-700",
-  completed: "bg-purple-100 text-purple-700",
+  pending: "bg-yellow-100 text-yellow-700",
+  signed: "bg-green-100 text-green-700",
+  expired: "bg-red-100 text-red-700",
+  cancelled: "bg-red-100 text-red-700",
 };
 
-const documentLabels: Record<string, string> = {
-  passport: "Passport",
-  id_card: "ID Card",
-  medical: "Medical Records",
-  insurance: "Insurance",
+const statusLabels: Record<string, string> = {
+  draft: "Draft",
+  pending: "Pending Signature",
+  signed: "Signed",
+  expired: "Expired",
+  cancelled: "Cancelled",
 };
 
-export default function ApplicationDetailPage() {
+export default function AgreementDetailPage() {
   const params = useParams();
   const router = useRouter();
   const id = params.id as string;
 
-  const [application, setApplication] = useState<Application | null>(null);
+  const [agreement, setAgreement] = useState<Agreement | null>(null);
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [notes, setNotes] = useState("");
-  const [error, setError] = useState("");
-  const [showAgreementModal, setShowAgreementModal] = useState(false);
+  const [sending, setSending] = useState(false);
 
   useEffect(() => {
-    fetchApplication();
+    fetchAgreement();
   }, [id]);
 
-  const fetchApplication = async () => {
+  const fetchAgreement = async () => {
     try {
       setLoading(true);
-      const data = await api.get(`/api/applications/${id}`);
-      setApplication(data);
-      setNotes(data.notes || "");
+      const data = await api.get(`/api/agreements/${id}`);
+      setAgreement(data);
     } catch (error) {
-      console.error("Failed to fetch application:", error);
-      setError("Failed to load application");
+      console.error("Failed to fetch agreement:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSaveNotes = async () => {
+  const handleSend = async () => {
+    if (!agreement) return;
     try {
-      setSaving(true);
-      await api.put(`/api/applications/${id}`, { notes });
-      await fetchApplication();
+      setSending(true);
+      await api.post(`/api/agreements/${agreement.id}/send`);
+      await fetchAgreement();
     } catch (error) {
-      console.error("Failed to save notes:", error);
-      setError("Failed to save notes");
+      console.error("Failed to send agreement:", error);
     } finally {
-      setSaving(false);
+      setSending(false);
     }
   };
 
-  const handleApprove = async () => {
+  const handleDownload = async () => {
+    if (!agreement) return;
     try {
-      setSaving(true);
-      await api.post(`/api/applications/${id}/approve`, { notes });
-      await fetchApplication();
+      window.open(
+        `http://localhost:8000/api/agreements/${agreement.id}/download`,
+        "_blank"
+      );
     } catch (error) {
-      console.error("Failed to approve:", error);
-      setError("Failed to approve application");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleReject = async () => {
-    try {
-      setSaving(true);
-      await api.post(`/api/applications/${id}/reject`, { notes });
-      await fetchApplication();
-    } catch (error) {
-      console.error("Failed to reject:", error);
-      setError("Failed to reject application");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleReopen = async () => {
-    try {
-      setSaving(true);
-      await api.post(`/api/applications/${id}/reopen`);
-      await fetchApplication();
-    } catch (error) {
-      console.error("Failed to reopen:", error);
-      setError("Failed to reopen application");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDownload = async (documentId: number) => {
-    console.log("🟢 Download clicked for document:", documentId);
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        alert("You must be logged in to download documents.");
-        return;
-      }
-      const url = `http://localhost:8000/api/applications/${id}/documents/${documentId}/download`;
-      const response = await fetch(url, {
-        method: "GET",
-        headers: { "Authorization": `Bearer ${token}` },
-      });
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Download failed: ${response.status} ${response.statusText}`);
-      }
-      const contentType = response.headers.get("Content-Type");
-      if (contentType && contentType.includes("application/json")) {
-        const error = await response.json();
-        alert(error.detail || "Server error");
-        return;
-      }
-      const blob = await response.blob();
-      if (blob.size === 0) {
-        alert("Downloaded file is empty");
-        return;
-      }
-      const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `document_${documentId}`;
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="(.+)"/);
-        if (match) filename = match[1];
-      }
-      const urlBlob = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = urlBlob;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(() => {
-        window.URL.revokeObjectURL(urlBlob);
-        a.remove();
-      }, 100);
-      console.log("✅ Download initiated");
-    } catch (error: any) {
-      console.error("❌ Download error:", error);
-      alert(error.message || "Failed to download document. Please try again.");
+      console.error("Failed to download:", error);
     }
   };
 
@@ -230,325 +105,153 @@ export default function ApplicationDetailPage() {
     );
   }
 
-  if (error || !application) {
+  if (!agreement) {
     return (
       <div className="text-center py-12">
-        <p className="text-red-500">{error || "Application not found"}</p>
-        <Link href="/applications">
-          <Button className="mt-4">Back to Applications</Button>
+        <p className="text-gray-500">Agreement not found</p>
+        <Link href="/agreements">
+          <Button className="mt-4">Back to Agreements</Button>
         </Link>
       </div>
     );
   }
 
-  const isApproved = application.status === "approved";
-  const isRejected = application.status === "rejected";
-  const canReview = ["submitted", "under_review"].includes(application.status);
-
   return (
-    <div className="space-y-6 max-w-5xl mx-auto">
+    <div className="space-y-6 max-w-4xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between flex-wrap gap-2">
+      <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/applications">
+          <Link href="/agreements">
             <Button variant="outline" size="sm" className="gap-2">
               <ArrowLeft className="h-4 w-4" /> Back
             </Button>
           </Link>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{application.full_name}</h1>
-            <div className="flex items-center gap-3 mt-1 flex-wrap">
-              <Badge className={statusColors[application.status] || "bg-gray-100"}>
-                {application.status}
+            <h1 className="text-2xl font-bold text-gray-900">
+              {agreement.agreement_number}
+            </h1>
+            <div className="flex items-center gap-3 mt-1">
+              <Badge className={statusColors[agreement.status] || "bg-gray-100"}>
+                {statusLabels[agreement.status] || agreement.status}
               </Badge>
               <span className="text-sm text-gray-500">
-                Lead: {application.lead_name}
+                Lead: {agreement.lead_name}
               </span>
             </div>
           </div>
         </div>
-        <div className="flex gap-2 flex-wrap">
-          {canReview && (
-            <>
-              <Button
-                variant="outline"
-                className="border-green-500 text-green-600 hover:bg-green-50"
-                onClick={handleApprove}
-                disabled={saving}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <CheckCircle className="h-4 w-4 mr-2" />}
-                Approve
-              </Button>
-              <Button
-                variant="outline"
-                className="border-red-500 text-red-600 hover:bg-red-50"
-                onClick={handleReject}
-                disabled={saving}
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <XCircle className="h-4 w-4 mr-2" />}
-                Reject
-              </Button>
-            </>
-          )}
-          {(isApproved || isRejected) && (
-            <Button
-              variant="outline"
-              className="border-yellow-500 text-yellow-600 hover:bg-yellow-50"
-              onClick={handleReopen}
-              disabled={saving}
-            >
-              {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
-              Reopen
+        <div className="flex gap-2">
+          {agreement.status === "draft" && (
+            <Button onClick={handleSend} disabled={sending} className="gap-2">
+              {sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Mail className="h-4 w-4" />}
+              Send to Lead
             </Button>
           )}
-          {isApproved && (
-            <>
-              <Button variant="outline" className="border-green-500 text-green-600" disabled>
-                <CheckCircle className="h-4 w-4 mr-2" /> Approved
-              </Button>
-              {/* ✅ Generate Agreement Button */}
-              <Button
-                variant="outline"
-                className="gap-2 border-blue-500 text-blue-600 hover:bg-blue-50"
-                onClick={() => setShowAgreementModal(true)}
-              >
-                <FileText className="h-4 w-4" /> Generate Agreement
-              </Button>
-            </>
-          )}
-          {isRejected && (
-            <Button variant="outline" className="border-red-500 text-red-600" disabled>
-              <XCircle className="h-4 w-4 mr-2" /> Rejected
+          {agreement.status === "signed" && agreement.signed_pdf_path && (
+            <Button onClick={handleDownload} variant="outline" className="gap-2">
+              <Download className="h-4 w-4" /> Download PDF
             </Button>
           )}
         </div>
       </div>
 
-      {/* Personal Information */}
+      {/* Lead Info */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <User className="h-5 w-5 text-gray-400" /> Personal Information
-          </CardTitle>
+          <CardTitle className="text-lg">Lead Information</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-2 gap-4">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-gray-400" />
+            <div>
               <span className="text-sm text-gray-500">Name:</span>
-              <span className="font-medium">{application.full_name}</span>
+              <p className="font-medium">{agreement.lead_name}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-gray-400" />
+            <div>
               <span className="text-sm text-gray-500">Email:</span>
-              <span className="font-medium">{application.email}</span>
+              <p className="font-medium">{agreement.lead_email}</p>
             </div>
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-gray-400" />
+            <div>
               <span className="text-sm text-gray-500">Phone:</span>
-              <span className="font-medium">{application.phone}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-500">Date of Birth:</span>
-              <span className="font-medium">{application.date_of_birth || "Not provided"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-500">Nationality:</span>
-              <span className="font-medium">{application.nationality || "Not provided"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <MapPin className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-500">Address:</span>
-              <span className="font-medium">{application.current_address || "Not provided"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-500">Marital Status:</span>
-              <span className="font-medium">{application.marital_status || "Not provided"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-500">Occupation:</span>
-              <span className="font-medium">{application.occupation || "Not provided"}</span>
+              <p className="font-medium">{agreement.lead_phone}</p>
             </div>
           </div>
         </CardContent>
       </Card>
 
-      {/* Emergency Contact */}
+      {/* Agreement Details */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Phone className="h-5 w-5 text-gray-400" /> Emergency Contact
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-500">Name:</span>
-              <span className="font-medium">{application.emergency_name || "Not provided"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-500">Relationship:</span>
-              <span className="font-medium">{application.emergency_relationship || "Not provided"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Phone className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-500">Phone:</span>
-              <span className="font-medium">{application.emergency_phone || "Not provided"}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Mail className="h-4 w-4 text-gray-400" />
-              <span className="text-sm text-gray-500">Email:</span>
-              <span className="font-medium">{application.emergency_email || "Not provided"}</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Medical Information */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Heart className="h-5 w-5 text-gray-400" /> Medical Information
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div>
-              <span className="text-sm text-gray-500">Medical Conditions:</span>
-              <p className="font-medium">{application.medical_conditions || "None provided"}</p>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">Medications:</span>
-              <p className="font-medium">{application.medications || "None provided"}</p>
-            </div>
-            <div>
-              <span className="text-sm text-gray-500">Allergies:</span>
-              <p className="font-medium">{application.allergies || "None provided"}</p>
-            </div>
-            <div className="grid md:grid-cols-2 gap-4">
-              <div>
-                <span className="text-sm text-gray-500">Primary Doctor:</span>
-                <p className="font-medium">{application.doctor_name || "Not provided"}</p>
-              </div>
-              <div>
-                <span className="text-sm text-gray-500">Doctor's Phone:</span>
-                <p className="font-medium">{application.doctor_phone || "Not provided"}</p>
-              </div>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Preferences */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FileCheck className="h-5 w-5 text-gray-400" /> Preferences
-          </CardTitle>
+          <CardTitle className="text-lg">Agreement Details</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid md:grid-cols-2 gap-4">
             <div>
-              <span className="text-sm text-gray-500">Preferred Move Date:</span>
-              <p className="font-medium">{application.preferred_move_date || "Not provided"}</p>
+              <span className="text-sm text-gray-500">Facility:</span>
+              <p className="font-medium">{agreement.facility}</p>
             </div>
             <div>
-              <span className="text-sm text-gray-500">Preferred Country:</span>
-              <p className="font-medium">{application.preferred_country || "Not provided"}</p>
+              <span className="text-sm text-gray-500">Room Number:</span>
+              <p className="font-medium">{agreement.room_number || "Not specified"}</p>
             </div>
             <div>
-              <span className="text-sm text-gray-500">Preferred Facility:</span>
-              <p className="font-medium">{application.preferred_facility || "Not provided"}</p>
+              <span className="text-sm text-gray-500">Move-in Date:</span>
+              <p className="font-medium">
+                {new Date(agreement.move_in_date).toLocaleDateString()}
+              </p>
             </div>
-            <div className="md:col-span-2">
-              <span className="text-sm text-gray-500">Special Requirements:</span>
-              <p className="font-medium">{application.special_requirements || "None"}</p>
+            <div>
+              <span className="text-sm text-gray-500">Monthly Fee:</span>
+              <p className="font-medium">${agreement.monthly_fee.toLocaleString()}</p>
             </div>
+            {agreement.security_deposit && (
+              <div>
+                <span className="text-sm text-gray-500">Security Deposit:</span>
+                <p className="font-medium">${agreement.security_deposit.toLocaleString()}</p>
+              </div>
+            )}
+            <div>
+              <span className="text-sm text-gray-500">Status:</span>
+              <p className="font-medium">{statusLabels[agreement.status] || agreement.status}</p>
+            </div>
+            <div>
+              <span className="text-sm text-gray-500">Created:</span>
+              <p className="font-medium">
+                {new Date(agreement.created_at).toLocaleString()}
+              </p>
+            </div>
+            {agreement.sent_at && (
+              <div>
+                <span className="text-sm text-gray-500">Sent:</span>
+                <p className="font-medium">
+                  {new Date(agreement.sent_at).toLocaleString()}
+                </p>
+              </div>
+            )}
+            {agreement.signed_at && (
+              <div>
+                <span className="text-sm text-gray-500">Signed:</span>
+                <p className="font-medium">
+                  {new Date(agreement.signed_at).toLocaleString()}
+                </p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
 
-      {/* Documents */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FileText className="h-5 w-5 text-gray-400" /> Documents
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {application.documents && application.documents.length > 0 ? (
-            <div className="space-y-3">
-              {application.documents.map((doc) => (
-                <div key={doc.id} className="flex items-center justify-between p-3 border rounded-lg">
-                  <div className="flex items-center gap-3">
-                    <FileText className="h-5 w-5 text-gray-400" />
-                    <div>
-                      <div className="font-medium">{documentLabels[doc.document_type] || doc.document_type}</div>
-                      <div className="text-sm text-gray-500">{doc.file_name}</div>
-                    </div>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => handleDownload(doc.id)}
-                  >
-                    <Download className="h-4 w-4" /> Download
-                  </Button>
-                </div>
-              ))}
+      {/* Terms & Conditions */}
+      {agreement.terms_conditions && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Terms & Conditions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="p-4 bg-gray-50 rounded-lg whitespace-pre-wrap text-sm">
+              {agreement.terms_conditions}
             </div>
-          ) : (
-            <p className="text-gray-500 text-sm">No documents uploaded yet</p>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Notes + Save Button */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <FileText className="h-5 w-5 text-gray-400" /> Notes
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <Textarea
-            placeholder="Add internal notes about this application..."
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="min-h-[100px]"
-          />
-          <div className="flex justify-end">
-            <Button onClick={handleSaveNotes} disabled={saving} className="gap-2">
-              {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-              Save Notes
-            </Button>
-          </div>
-          <p className="text-xs text-gray-400">
-            These notes are only visible to staff members.
-          </p>
-        </CardContent>
-      </Card>
-
-      {/* ✅ Generate Agreement Modal */}
-      <GenerateAgreementModal
-        open={showAgreementModal}
-        onClose={() => setShowAgreementModal(false)}
-        leadId={application.lead_id}
-        leadName={application.full_name}
-        leadEmail={application.email}
-        leadPhone={application.phone}
-        applicationId={application.id}
-        onSuccess={() => {
-          fetchApplication();
-        }}
-      />
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
