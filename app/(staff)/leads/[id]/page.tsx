@@ -397,32 +397,38 @@ export default function LeadDetailPage() {
                 {new Date(lead.created_at).toLocaleString()}
               </div>
             </div>
-            <div>
-              <Label>Assigned Team Member</Label>
-              <Select
-                value={lead.assigned_to?.toString() || ""}
-                onValueChange={async (value) => {
-                  try {
-                    await api.put(`/api/leads/${leadId}`, { assigned_to: value ? parseInt(value) : null });
-                    await fetchLead();
-                  } catch (error) {
-                    console.error("Failed to assign staff:", error);
-                  }
-                }}
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder="Assign to..." />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="">Unassigned</SelectItem>
-                  {staffList.map((staff) => (
-                    <SelectItem key={staff.id} value={staff.id.toString()}>
-                      {staff.name} ({staff.role})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+          <div>
+            <Label>Assigned Team Member</Label>
+            <Select
+              value={lead.assigned_to?.toString() || ""}
+              onValueChange={async (value) => {
+                try {
+                  const assignedTo = value ? parseInt(value) : null;
+                  await api.put(`/api/leads/${leadId}`, { assigned_to: assignedTo });
+                  await fetchLead();
+                } catch (error) {
+                  console.error("Failed to assign staff:", error);
+                }
+              }}
+            >
+              <SelectTrigger className="mt-1">
+                <SelectValue placeholder="Assign to...">
+                  {(() => {
+                    const selected = staffList.find(s => s.id.toString() === lead.assigned_to?.toString());
+                    return selected ? `${selected.name} (${selected.role})` : null;
+                  })()}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="">Unassigned</SelectItem>
+                {staffList.map((staff) => (
+                  <SelectItem key={staff.id} value={staff.id.toString()}>
+                    {staff.name} ({staff.role})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           </div>
         </CardContent>
       </Card>
