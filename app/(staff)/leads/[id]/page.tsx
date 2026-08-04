@@ -79,9 +79,12 @@ export default function LeadDetailPage() {
   const [applicationStatus, setApplicationStatus] = useState<string | null>(
     null
   );
+  const [staffList, setStaffList] = useState<{ id: number; name: string; email: string; role: string }[]>([]);
 
+  // ✅ Combined useEffect — only ONE
   useEffect(() => {
     fetchLead();
+    fetchStaffList();
   }, [leadId]);
 
   const fetchLead = async () => {
@@ -91,7 +94,6 @@ export default function LeadDetailPage() {
       setLead(data);
       setNotes(data.notes || "");
       setStatus(data.status);
-      // Check if application was sent
       if (data.application_status) {
         setApplicationStatus(data.application_status);
       }
@@ -101,6 +103,20 @@ export default function LeadDetailPage() {
       setLoading(false);
     }
   };
+
+ const fetchStaffList = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    console.log("🔑 Token exists?", !!token);
+    console.log("🔑 Token:", token?.substring(0, 30) + "...");
+    
+    const data = await api.get("/api/staff/dropdown");
+    console.log("👥 Staff data:", data);
+    setStaffList(data);
+  } catch (error) {
+    console.error("Failed to fetch staff:", error);
+  }
+};
 
   const handleRequalify = async () => {
     try {
@@ -129,7 +145,6 @@ export default function LeadDetailPage() {
     }
   };
 
-  // ✅ Send Application Handler
   const handleSendApplication = async () => {
     try {
       setSendingApplication(true);
@@ -191,7 +206,6 @@ export default function LeadDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* ✅ Send Application Button */}
           <Button
             variant="outline"
             className="gap-2 border-blue-500 text-blue-600 hover:bg-blue-50"
@@ -385,9 +399,29 @@ export default function LeadDetailPage() {
             </div>
             <div>
               <Label>Assigned Team Member</Label>
-              <div className="mt-1 p-2 bg-gray-50 rounded border text-sm">
-                {lead.assigned_to ? `Staff ID: ${lead.assigned_to}` : "Not assigned"}
-              </div>
+              <Select
+                value={lead.assigned_to?.toString() || ""}
+                onValueChange={async (value) => {
+                  try {
+                    await api.put(`/api/leads/${leadId}`, { assigned_to: value ? parseInt(value) : null });
+                    await fetchLead();
+                  } catch (error) {
+                    console.error("Failed to assign staff:", error);
+                  }
+                }}
+              >
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder="Assign to..." />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Unassigned</SelectItem>
+                  {staffList.map((staff) => (
+                    <SelectItem key={staff.id} value={staff.id.toString()}>
+                      {staff.name} ({staff.role})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
         </CardContent>

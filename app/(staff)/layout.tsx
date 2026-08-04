@@ -37,6 +37,7 @@ const navItems = [
    { href: "/agreements", label: "Agreements", icon: FileCheck },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/consultations", label: "Consultations", icon: Calendar },
+  { href: "/settings", label: "Staff", icon: Settings }, 
 ];
 
 const handleLogout = () => {
